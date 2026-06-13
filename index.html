@@ -47,34 +47,69 @@
     </div>
 
     <script>
-        const REPOS = ['cloudvista', 'common', 'rustless-linux', 'test', 'xuser75', 'xuser75.github.io', 'Fiwix', 'FiwixOS', 'TLVC', 'gigablast'];
         const OWNER = 'xuser75';
 
-        async function fetchRepositories() {
+        async function fetchAllRepositories() {
+            let allRepos = [];
+            let page = 1;
+            let hasMore = true;
+
+            while (hasMore) {
+                try {
+                    const response = await fetch(`https://api.github.com/users/${OWNER}/repos?page=${page}&per_page=100&sort=updated&direction=desc`);
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    
+                    if (data.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allRepos = allRepos.concat(data);
+                        page++;
+                    }
+                } catch (error) {
+                    console.error('Error fetching repositories:', error);
+                    hasMore = false;
+                }
+            }
+
+            return allRepos;
+        }
+
+        async function renderRepositories() {
             const grid = document.getElementById('reposGrid');
             grid.innerHTML = '';
 
-            for (const repo of REPOS) {
-                const card = createSkeletonCard(repo);
-                grid.appendChild(card);
+            // Show loading skeletons
+            for (let i = 0; i < 6; i++) {
+                grid.appendChild(createSkeletonCard(`loading-${i}`));
+            }
 
-                try {
-                    const response = await fetch(`https://api.github.com/repos/${OWNER}/${repo}`);
-                    const data = await response.json();
-                    updateCard(repo, data);
-                } catch (error) {
-                    console.error(`Error fetching ${repo}:`, error);
-                    updateCardError(repo);
+            try {
+                const repos = await fetchAllRepositories();
+                grid.innerHTML = '';
+
+                repos.forEach(repo => {
+                    const card = createRepoCard(repo);
+                    grid.appendChild(card);
+                });
+
+                if (repos.length === 0) {
+                    grid.innerHTML = '<p class="error">No repositories found</p>';
                 }
+            } catch (error) {
+                console.error('Error rendering repositories:', error);
+                grid.innerHTML = '<p class="error">Failed to load repositories</p>';
             }
 
             document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
         }
 
-        function createSkeletonCard(repoName) {
+        function createSkeletonCard(id) {
             const card = document.createElement('div');
             card.className = 'repo-card loading';
-            card.id = `repo-${repoName}`;
+            card.id = `repo-${id}`;
             card.innerHTML = `
                 <div class="skeleton" style="width: 150px; height: 24px;"></div>
                 <div class="skeleton" style="width: 80px; margin-top: 10px;"></div>
@@ -86,10 +121,10 @@
             return card;
         }
 
-        function updateCard(repoName, data) {
-            const card = document.getElementById(`repo-${repoName}`);
-            if (!card) return;
-
+        function createRepoCard(data) {
+            const card = document.createElement('div');
+            card.className = 'repo-card';
+            
             const isFork = data.fork ? '<span class="badge fork-badge">Fork</span>' : '';
             const language = data.language ? `<span class="badge">${data.language}</span>` : '';
             const license = data.license ? `<div class="meta-item">📄 <span>${data.license.name}</span></div>` : '';
@@ -112,24 +147,15 @@
                     ${license}
                 </div>
             `;
-            card.classList.remove('loading');
+            
+            return card;
         }
 
-        function updateCardError(repoName) {
-            const card = document.getElementById(`repo-${repoName}`);
-            if (!card) return;
-
-            card.innerHTML = `
-                <div class="repo-name">
-                    <a href="https://github.com/${OWNER}/${repoName}" class="repo-link">${repoName}</a>
-                </div>
-                <p class="error">Failed to load data</p>
-            `;
-            card.classList.remove('loading');
-        }
-
-        fetchRepositories();
-        setInterval(fetchRepositories, 5 * 60 * 1000);
+        // Initial load
+        renderRepositories();
+        
+        // Refresh every 5 minutes
+        setInterval(renderRepositories, 5 * 60 * 1000);
     </script>
 </body>
 </html>
