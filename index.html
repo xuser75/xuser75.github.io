@@ -47,7 +47,7 @@
     </div>
 
     <script>
-        const REPOS = ['cloudvista', 'common', 'rustless-linux', 'test', 'xuser75', 'xuser75.github.io'];
+        const REPOS = ['cloudvista', 'common', 'rustless-linux', 'test', 'xuser75', 'xuser75.github.io', 'Fiwix', 'FiwixOS', 'TLVC', 'gigablast'];
         const OWNER = 'xuser75';
 
         async function fetchRepositories() {
@@ -96,7 +96,7 @@
             
             const size = data.size < 1024 
                 ? `${data.size} KB` 
-                : `${(data.size / 1024).toFixed(2)} GB`;
+                : `${(data.size / 1024).toFixed(2)} MB`;
 
             card.innerHTML = `
                 <div class="repo-name">
